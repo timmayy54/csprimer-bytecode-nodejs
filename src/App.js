@@ -21,28 +21,28 @@ function App() {
         const parts = instruction.trim().split(' ');
         const op = parts[0].toUpperCase();
         const reg1 = parts[1] ? parts[1].toLowerCase() : null;
-        const reg2 = parts[2] ? parts[2] : null;
+        const reg2 = parts[2] ? parts[2].toLowerCase() : null;
         const imm = parts[2] ? parseInt(parts[2], 10) : null;
 
         switch (op) {
             case 'LOAD':
-                return [0x01, reg1 === 'r1' ? 0x01 : 0x02, imm];
+                return [0x01, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
             case 'STORE':
-                return [0x02, reg1 === 'r1' ? 0x01 : 0x02, imm];
+                return [0x02, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
             case 'ADD':
-                return [0x03, reg1 === 'r1' ? 0x01 : 0x02, reg2 === 'r1' ? 0x01 : 0x02];
+                return [0x03, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, reg2 === 'r1' ? 0x01 : reg2 === 'r2' ? 0x02 : 0x03];
             case 'SUB':
-                return [0x04, reg1 === 'r1' ? 0x01 : 0x02, reg2 === 'r1' ? 0x01 : 0x02];
+                return [0x04, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, reg2 === 'r1' ? 0x01 : reg2 === 'r2' ? 0x02 : 0x03];
             case 'HALT':
                 return [0xff];
             case 'ADDI':
-                return [0x05, reg1 === 'r1' ? 0x01 : 0x02, imm];
+                return [0x05, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
             case 'SUBI':
-                return [0x06, reg1 === 'r1' ? 0x01 : 0x02, imm];
+                return [0x06, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
             case 'JUMP':
                 return [0x07, imm];
             case 'BEQZ':
-                return [0x08, reg1 === 'r1' ? 0x01 : 0x02, imm];
+                return [0x08, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
             default:
                 throw new Error(`Invalid operation: ${op}`);
         }
@@ -57,7 +57,7 @@ function App() {
             newMemory[i + 8] = parsedProgram[i];
         }
         setMemory(newMemory);
-        setOutput([...output, 'Program loaded into memory:', ...parsedProgram.map(inst => inst.join(' '))]);
+        setOutput([...output, 'Program loaded into memory:', ...parsedProgram.map(inst => inst.map(toHex).join(' '))]);
         setCurrentLine(8); // Set current line to the start of instructions
     };
 
@@ -142,7 +142,7 @@ function App() {
 }
 
 function reg(s) {
-    return {'r1': 0x01, 'r2': 0x02}[s];
+    return {'r1': 0x01, 'r2': 0x02, 'r3': 0x03}[s];
 }
 
 function mem(s) {
