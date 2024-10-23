@@ -3,7 +3,7 @@ import './App.css';
 
 function App() {
     const [memory, setMemory] = useState(Array(256).fill(0));
-    const [program, setProgram] = useState(`load r1 1\nload r2 2\nadd r1 r2\nstore r1 0\nhalt`);
+    const [program, setProgram] = useState(`load r1 1\nload r2 2\nadd r1 r2\nstore 0\nhalt`);
     const [currentLine, setCurrentLine] = useState(0);
     const [output, setOutput] = useState([]);
 
@@ -21,28 +21,17 @@ function App() {
         const parts = instruction.trim().split(' ');
         const op = parts[0].toUpperCase();
         const reg1 = parts[1] ? parts[1].toLowerCase() : null;
-        const reg2 = parts[2] ? parts[2].toLowerCase() : null;
         const imm = parts[2] ? parseInt(parts[2], 10) : null;
 
         switch (op) {
             case 'LOAD':
-                return [0x01, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
+                return [0x01, reg1 === 'r1' ? 0x08 : reg1 === 'r2' ? 0x09 : 0x0A, imm];
             case 'STORE':
-                return [0x02, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
+                return [0x02, imm]; // Store to memory address
             case 'ADD':
-                return [0x03, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, reg2 === 'r1' ? 0x01 : reg2 === 'r2' ? 0x02 : 0x03];
-            case 'SUB':
-                return [0x04, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, reg2 === 'r1' ? 0x01 : reg2 === 'r2' ? 0x02 : 0x03];
+                return [0x03, 0x08, 0x09]; // Add r1 and r2
             case 'HALT':
                 return [0xff];
-            case 'ADDI':
-                return [0x05, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
-            case 'SUBI':
-                return [0x06, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
-            case 'JUMP':
-                return [0x07, imm];
-            case 'BEQZ':
-                return [0x08, reg1 === 'r1' ? 0x01 : reg1 === 'r2' ? 0x02 : 0x03, imm];
             default:
                 throw new Error(`Invalid operation: ${op}`);
         }
@@ -68,16 +57,16 @@ function App() {
             let description = '';
             switch (instruction[0]) {
                 case 0x01:
-                    description = `Load operation put the value ${toHex(instruction[2])} into register 1.`;
-                    newMemory[1] = instruction[2];
+                    description = `Load operation put the value ${toHex(instruction[2])} into register ${instruction[1] === 0x08 ? '1' : '2'}.`;
+                    newMemory[instruction[1]] = instruction[2];
                     break;
                 case 0x02:
-                    description = `Store operation stored the value from register 1 into memory address ${toHex(instruction[2])}.`;
-                    newMemory[instruction[2]] = newMemory[1];
+                    description = `Store operation stored the value from register 1 into memory address ${toHex(instruction[1])}.`;
+                    newMemory[instruction[1]] = newMemory[0x08]; // Store result in memory[0]
                     break;
                 case 0x03:
                     description = `Add operation added the values of register 1 and register 2.`;
-                    newMemory[0] = newMemory[1] + newMemory[2];
+                    newMemory[0x08] = newMemory[0x08] + newMemory[0x09]; // Store result in r1
                     break;
                 case 0xff:
                     description = 'Halt operation executed.';
@@ -92,7 +81,7 @@ function App() {
     };
 
     const toHex = (value) => {
-        return value.toString(16).padStart(2, '0');
+        return (value !== null && value !== undefined) ? value.toString(16).padStart(2, '0') : '00';
     };
 
     return (
@@ -123,8 +112,9 @@ function App() {
             <div className="right-column">
                 <h2>Registers</h2>
                 <p>Program Counter (PC): {toHex(currentLine)}</p>
-                <p>Register 1 (R1): {toHex(memory[1])}</p>
-                <p>Register 2 (R2): {toHex(memory[2])}</p>
+                <p>Register 1 (R1): {toHex(memory[0x08])}</p>
+                <p>Register 2 (R2): {toHex(memory[0x09])}</p>
+                <p>Register 3 (R3): {toHex(memory[0x0A])}</p>
                 <h2>Input Memory (Remaining Bytes)</h2>
                 <table>
                     <tbody>
@@ -142,7 +132,7 @@ function App() {
 }
 
 function reg(s) {
-    return {'r1': 0x01, 'r2': 0x02, 'r3': 0x03}[s];
+    return {'r1': 0x08, 'r2': 0x09, 'r3': 0x0A}[s];
 }
 
 function mem(s) {
